@@ -1,4 +1,4 @@
-package com.liyang.job;
+package com.liyang;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
