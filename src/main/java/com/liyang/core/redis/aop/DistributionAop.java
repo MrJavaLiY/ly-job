@@ -1,14 +1,19 @@
 
 package com.liyang.core.redis.aop;
 
+import com.liyang.utils.CronExpressionParser;
 import com.liyang.utils.TaskExecutionRecorder;
 import com.liyang.utils.TraceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Pointcut;
+import org.redisson.api.RBucket;
+import org.redisson.api.RScript;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import org.redisson.api.RLock;
@@ -61,7 +66,6 @@ public class DistributionAop {
         TraceContext.setTraceId(traceId);
 
         RLock lock = redissonClient.getLock(lockKey);
-        long redisTime = getRedisTime();
         boolean isLocked = false;
 
         try {
@@ -73,14 +77,14 @@ public class DistributionAop {
             if (isLocked) {
                 // 抢到锁的任务 - 直接执行不做时间调整
                 log.info("获取任务锁成功，开始执行任务[{}]", taskName);
-                long startTime = System.currentTimeMillis();
+                long startTime = getRedisTime();
 
                 try {
                     // 记录当前执行时间
                     redissonClient.getBucket(timeSyncKey).set(startTime);
                     return joinPoint.proceed();
                 } finally {
-                    long duration = System.currentTimeMillis() - startTime;
+                    long duration = getRedisTime() - startTime;
                     TaskExecutionRecorder.record(taskName, duration);
                     log.info("任务[{}]执行完成，耗时 {} ms", taskName, duration);
                 }
@@ -94,6 +98,7 @@ public class DistributionAop {
 
                 if (lastRunTime != null) {
                     // 计算预期下次执行时间
+                    Scheduled scheduled = joinPoint.getTarget().getClass().getMethod(methodName).getAnnotation(Scheduled.class);
                     long taskInterval = getTaskInterval(scheduled);
                     long nextExpectedTime = lastRunTime + taskInterval;
                     long now = System.currentTimeMillis();
@@ -130,6 +135,9 @@ public class DistributionAop {
     }
 
     private long getTaskInterval(Scheduled scheduled) {
+        if (scheduled==null){
+            return 0;
+        }
         if (scheduled.fixedRate() > 0) return scheduled.fixedRate();
         if (scheduled.fixedDelay() > 0) return scheduled.fixedDelay();
         if (!scheduled.cron().isEmpty()) {
