@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Pointcut;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -36,7 +37,19 @@ public class DistributionAop {
         this.redissonClient = redissonClient;
     }
 
-    @Around("@annotation(org.springframework.scheduling.annotation.Scheduled)")
+    @Pointcut("bean(*Job)")
+    public void quartzJobExecution() {
+    }
+
+    @Pointcut("@annotation(org.springframework.scheduling.annotation.Scheduled)")
+    public void scheduledMethod() {
+    }
+    @Pointcut("execution(* org.springframework.scheduling.quartz.QuartzJobBean+.executeInternal(..))")
+    public void executeInternalJob() {
+    }
+
+    //        @Around("@annotation(scheduled)|| quartzJobExecution()")
+    @Around(" scheduledMethod()|| quartzJobExecution()||executeInternalJob()")
     public Object aroundSchedule(ProceedingJoinPoint joinPoint) throws Throwable {
         String className = joinPoint.getTarget().getClass().getSimpleName();
         String methodName = joinPoint.getSignature().getName();
