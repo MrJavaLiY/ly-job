@@ -1,13 +1,15 @@
 package com.liyang.operation;
 
-import com.yxkj.ptjk.netcore.info.SystemInfo;
-import com.yxkj.ptjk.netcore.quartz.dao.TbScheduledTaskConfigDao;
-import com.yxkj.ptjk.netcore.quartz.entity.TbScheduledTaskConfig;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.liyang.dao.TbScheduledTaskConfigDao;
+import com.liyang.entity.TbScheduledTaskConfig;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ScanResult;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.math.NumberUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.Order;
@@ -41,8 +43,8 @@ public class DynamicTaskManager {
     @Resource
     private TbScheduledTaskConfigDao scheduledTaskConfigDao;
 
-    @Resource
-    SystemInfo systemInfo;
+    @Value("${spring.application.name}")
+    private String  appName;
 
     private final Map<String, ScheduledFuture<?>> runningTasks = new ConcurrentHashMap<>();
     private final Map<String, TbScheduledTaskConfig> taskConfigs = new ConcurrentHashMap<>();
@@ -55,7 +57,7 @@ public class DynamicTaskManager {
     public void initAllTasks() {
         updateTaskConfig();
         // 从数据库加载所有配置
-        List<TbScheduledTaskConfig> configs = scheduledTaskConfigDao.queryAll();
+        List<TbScheduledTaskConfig> configs = scheduledTaskConfigDao.selectList(null);
 
         for (TbScheduledTaskConfig config : configs) {
             taskConfigs.put(config.getTaskId(), config);
@@ -95,7 +97,7 @@ public class DynamicTaskManager {
 
                         TbScheduledTaskConfig config = new TbScheduledTaskConfig();
                         // 使用更唯一的任务名
-                        config.setTaskId(systemInfo.getApplicationName() + "." + beanClass.getSimpleName() + "." + method.getName());
+                        config.setTaskId(appName + "." + beanClass.getSimpleName() + "." + method.getName());
                         config.setTaskName(method.getName() + "Of" + beanClass.getSimpleName());
                         config.setTaskBean(applicationContext.getBeanNamesForType(beanClass)[0]);
                         config.setTaskMethod(method.getName());
@@ -136,10 +138,12 @@ public class DynamicTaskManager {
         if (!StringUtils.hasText(value)) {
             return null;
         }
-        if (NumberUtils.isParsable(value)) {
-            return NumberUtils.createLong(value);
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException e) {
+            log.warn("无法将字符串 '{}' 转换为 Long 类型", value, e);
+            return null;
         }
-        return null; // 或者抛出自定义异常，视业务而定
     }
 
     /**
@@ -197,7 +201,9 @@ public class DynamicTaskManager {
         TbScheduledTaskConfig scheduledTaskConfig = new TbScheduledTaskConfig();
         scheduledTaskConfig.setEnabled(false);
         scheduledTaskConfig.setTaskId(taskId);
-        scheduledTaskConfigDao.update(scheduledTaskConfig);
+        UpdateWrapper<TbScheduledTaskConfig> wrapper = new UpdateWrapper<>();
+        wrapper.setEntity(scheduledTaskConfig);
+        scheduledTaskConfigDao.updateById(scheduledTaskConfig);
         return true;
     }
 
@@ -228,9 +234,10 @@ public class DynamicTaskManager {
         if (wasRunning) {
             pauseTask(taskId);
         }
-
+        UpdateWrapper<TbScheduledTaskConfig> wrapper = new UpdateWrapper<>();
+        wrapper.setEntity(newConfig);
+        scheduledTaskConfigDao.updateById(newConfig);
         // 更新配置
-        scheduledTaskConfigDao.update(newConfig);
         newConfig = scheduledTaskConfigDao.getOneByName(taskId);
         taskConfigs.put(taskId, newConfig);
 

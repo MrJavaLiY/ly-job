@@ -1,11 +1,11 @@
 package com.liyang.controller;
 
-import com.yxkj.ptjk.netcore.quartz.entity.TbScheduledTaskConfig;
-import com.yxkj.ptjk.netcore.quartz.operation.DynamicTaskManager;
-import com.yxkj.ptjk.netcore.utils.ResponseEntity;
+import com.liyang.entity.TbScheduledTaskConfig;
+import com.liyang.operation.DynamicTaskManager;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -34,20 +34,20 @@ public class FlexibleQuartzController {
     @PostMapping("/start")
     @ApiOperation(value = "启动任务")
     public ResponseEntity<?> startTask(@RequestParam String taskName) {
-        return taskManager.startTask(taskName) ? ResponseEntity.success() : ResponseEntity.failed("启动任务失败");
+        return taskManager.startTask(taskName) ? ResponseEntity.ok().build() : ResponseEntity.status(500).body("启动任务失败");
     }
 
     @PostMapping("/stop")
     @ApiOperation(value = "停止任务")
     public ResponseEntity<?> stopTask(@RequestParam String taskName) {
         return taskManager.stopTask(taskName) ?
-                ResponseEntity.success() : ResponseEntity.failed("停止任务失败");
+                ResponseEntity.ok().build() : ResponseEntity.status(500).body("停止任务失败");
     }
     @PostMapping("/pause")
     @ApiOperation(value = "暂停任务")
     public ResponseEntity<?> pauseTask(@RequestParam String taskName) {
         return taskManager.pauseTask(taskName) ?
-                ResponseEntity.success() : ResponseEntity.failed("暂停任务");
+                ResponseEntity.ok().build() : ResponseEntity.status(500).body("暂停任务");
     }
 
     @PutMapping("/updateTask")
@@ -55,6 +55,6 @@ public class FlexibleQuartzController {
     public ResponseEntity<?> updateTask(
             @RequestBody TbScheduledTaskConfig newConfig) {
         return taskManager.updateTaskConfig(newConfig.getTaskId(), newConfig) ?
-                ResponseEntity.success() : ResponseEntity.failed("更新任务配置失败");
+                ResponseEntity.ok().build() : ResponseEntity.status(500).body("更新任务配置失败");
     }
 }

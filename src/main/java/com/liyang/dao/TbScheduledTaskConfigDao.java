@@ -1,8 +1,9 @@
 package com.liyang.dao;
 
-import com.yxkj.ptjk.netcore.core.BaseDao;
-import com.yxkj.ptjk.netcore.core.YxSqlPlus;
-import com.yxkj.ptjk.netcore.quartz.entity.TbScheduledTaskConfig;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.liyang.entity.TbScheduledTaskConfig;
+import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -14,35 +15,23 @@ import java.util.List;
  * @since 2025/5/19
  */
 @Repository
-public class TbScheduledTaskConfigDao extends BaseDao {
+public interface TbScheduledTaskConfigDao extends BaseMapper<TbScheduledTaskConfig> {
 
-    public List<TbScheduledTaskConfig> queryAll() {
-        YxSqlPlus<TbScheduledTaskConfig> yxSqlPlus = new YxSqlPlus<>(TbScheduledTaskConfig.class);
-        yxSqlPlus.select();
-        return selectList(yxSqlPlus);
+
+    default TbScheduledTaskConfig getOneByName(String taskId) {
+        LambdaQueryWrapper<TbScheduledTaskConfig> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(TbScheduledTaskConfig::getTaskId, taskId);
+        return selectOne(wrapper);
     }
 
-    public void insert(TbScheduledTaskConfig config) {
-        YxSqlPlus<TbScheduledTaskConfig> yxSqlPlus = new YxSqlPlus<>(TbScheduledTaskConfig.class);
-        yxSqlPlus.insert(config);
-        insert(yxSqlPlus);
-    }
-
-    public void update(TbScheduledTaskConfig config) {
-        YxSqlPlus<TbScheduledTaskConfig> yxSqlPlus = new YxSqlPlus<>(TbScheduledTaskConfig.class);
-        yxSqlPlus.updateById(config);
-        update(yxSqlPlus);
-    }
-
-    public void delete(TbScheduledTaskConfig config) {
-        YxSqlPlus<TbScheduledTaskConfig> yxSqlPlus = new YxSqlPlus<>(TbScheduledTaskConfig.class);
-        yxSqlPlus.deleteById(config);
-        delete(yxSqlPlus, 1);
-    }
-
-    public TbScheduledTaskConfig getOneByName(String taskId) {
-        YxSqlPlus<TbScheduledTaskConfig> yxSqlPlus = new YxSqlPlus<>(TbScheduledTaskConfig.class);
-        yxSqlPlus.select().eq(TbScheduledTaskConfig::getTaskId, taskId);
-        return select(yxSqlPlus);
+    default boolean isTableExists() {
+        try {
+            // 查询 LIMIT 1 的记录，不真正取数据，只验证表是否存在
+            selectObjs(new LambdaQueryWrapper<TbScheduledTaskConfig>().last("LIMIT 1"));
+            return true;
+        } catch (BadSqlGrammarException e) {
+            // 捕获 SQL语法错误，通常是表不存在
+            return false;
+        }
     }
 }

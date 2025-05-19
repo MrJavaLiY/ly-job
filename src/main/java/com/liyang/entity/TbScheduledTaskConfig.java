@@ -3,8 +3,6 @@ package com.liyang.entity;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.yxkj.ptjk.netcore.autotable.annotation.CreateTable;
-import com.yxkj.ptjk.netcore.autotable.annotation.TableColumn;
 import lombok.Data;
 
 import java.util.Date;
