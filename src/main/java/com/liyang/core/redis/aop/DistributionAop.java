@@ -1,6 +1,7 @@
 
 package com.liyang.core.redis.aop;
 
+import com.liyang.annotation.Exclude;
 import com.liyang.utils.CronExpressionParser;
 import com.liyang.utils.TaskExecutionRecorder;
 import com.liyang.utils.TraceContext;
@@ -57,6 +58,10 @@ public class DistributionAop {
     public Object aroundSchedule(ProceedingJoinPoint joinPoint) throws Throwable {
         String className = joinPoint.getTarget().getClass().getSimpleName();
         String methodName = joinPoint.getSignature().getName();
+        Exclude exclude = joinPoint.getTarget().getClass().getMethod(methodName).getAnnotation(Exclude.class);
+        if (exclude != null) {
+            return joinPoint.proceed();
+        }
         String taskName = className + "." + methodName;
         String lockKey = String.format("lock:schedule:%s[%s]", taskName, appName);
         String timeSyncKey = "lastSyncTime:" + taskName;
